@@ -14,7 +14,7 @@ rm -rf build
 mkdir -p build
 pushd build
 
-cmake -DCMAKE_BUILD_TYPE=relwithdebinfo ..
+cmake -DCMAKE_BUILD_TYPE=relwithdebinfo -DENTT_BUILD_TESTING=ON ..
 cmake --build . --config relwithdebinfo -- -j$(nproc)
 
 popd
