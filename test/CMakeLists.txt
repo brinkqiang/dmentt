@@ -9,7 +9,7 @@ find_package(Threads REQUIRED)
 if(ENTT_FIND_GTEST_PACKAGE)
     find_package(GTest REQUIRED)
 else()
-    add_subdirectory(../third_party/googletest)
+
     #FetchContent_Declare(
     #    googletest
     #    GIT_REPOSITORY https://github.com/google/googletest.git

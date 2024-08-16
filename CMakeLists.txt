@@ -33,6 +33,8 @@ ELSE(WIN32)
     SET(LIBRARY_OUTPUT_PATH ${CMAKE_SOURCE_DIR}/bin/${CMAKE_BUILD_TYPE})
 ENDIF(WIN32)
 
+add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/googletest)
+
 if(NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE Debug)
 endif()
