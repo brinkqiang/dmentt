@@ -1,12 +1,16 @@
-CMakeLists.txt.user
-CMakeCache.txt
-CMakeFiles
-CMakeScripts
-Testing
-Makefile
-cmake_install.cmake
-install_manifest.txt
-compile_commands.json
-CTestTestfile.cmake
-_deps
-CMakeUserPresets.json
+# Conan
+conan/test_package/build
+
+# IDEs
+*.user
+.idea
+.vscode
+.vs
+CMakeSettings.json
+cpp.hint
+
+# Bazel
+/bazel-*
+/test/bazel-*
+/user.bazelrc
+*.bazel.lock
