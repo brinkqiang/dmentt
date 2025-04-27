@@ -348,3 +348,7 @@ if(ENTT_BUILD_DOCS)
         add_subdirectory(docs)
     endif()
 endif()
+
+if (PROJECT_IS_TOP_LEVEL)
+    ExeImport("example" "")
+endif()
