@@ -1,6 +1,6 @@
 # EnTT
 
-cmake_minimum_required(VERSION 3.15.7)
+cmake_minimum_required(VERSION 3.21)
 
 # Read project version
 
@@ -350,5 +350,6 @@ if(ENTT_BUILD_DOCS)
 endif()
 
 if (PROJECT_IS_TOP_LEVEL)
+    include_directories("${CMAKE_CURRENT_SOURCE_DIR}/single_include")
     ExeImport("example" "")
 endif()
