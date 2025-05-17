@@ -192,14 +192,10 @@ public:
 };
 
 int main() {
-    // 调用 dmfix_win_utf8.h 中的函数 (如果需要)
-    // 例如: dmfix_win_utf8::init();
 
     GameSimulation game;
     game.initialize_world();
     game.run_combat_scenarios();
 
-    // 调用 dmfix_win_utf8.h 中的清理函数 (如果需要)
-    // 例如: dmfix_win_utf8::cleanup();
     return 0;
 }
