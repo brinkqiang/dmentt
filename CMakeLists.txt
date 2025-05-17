@@ -24,16 +24,6 @@ include(cmake/ModuleImport.cmake)
 include(cmake/ModuleCompileOptions.cmake)
 ModuleSetCompileOptions()
 
-if (WIN32)
-    link_directories(${CMAKE_SOURCE_DIR}/bin)
-    set(EXECUTABLE_OUTPUT_PATH ${CMAKE_SOURCE_DIR}/bin)
-    set(LIBRARY_OUTPUT_PATH ${CMAKE_SOURCE_DIR}/bin)
-else()
-    link_directories(${CMAKE_SOURCE_DIR}/bin/${CMAKE_BUILD_TYPE})
-    set(EXECUTABLE_OUTPUT_PATH ${CMAKE_SOURCE_DIR}/bin/${CMAKE_BUILD_TYPE})
-    set(LIBRARY_OUTPUT_PATH ${CMAKE_SOURCE_DIR}/bin/${CMAKE_BUILD_TYPE})
-endif()
-
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/googletest)
 
 if(NOT CMAKE_BUILD_TYPE)
