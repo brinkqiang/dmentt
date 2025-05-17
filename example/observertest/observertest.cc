@@ -1,7 +1,7 @@
 ﻿#include <iostream>
 #include <string>
 #include <entt/entt.hpp>
-#include "dmfix_win_utf8.h"
+#include "dmfix_win_utf8.h" // 用户提供的头文件
 
 // --- 组件定义 ---
 struct PlayerComponent {
@@ -71,130 +71,135 @@ class AchievementSystem {
 public:
     void onMonsterDefeated(const MonsterDefeatedEvent &event) {
         std::cout << "[成就系统] " << event.victor_player_name << " 因击败 " << event.defeated_monster_type << " 获得了成就点！\n";
-        if(event.defeated_monster_type == "巨龙") { // 注意：这里原为 "巨龙", 示例中怪物名为 "奥妮克希亚"
+        if(event.defeated_monster_type == "巨龙") {
             std::cout << "[成就系统] " << event.victor_player_name << " 完成了“屠龙伟业”成就！\n";
-        } else if(event.defeated_monster_type == "奥妮克希亚") { // 为匹配示例添加此条件
+        } else if(event.defeated_monster_type == "奥妮克希亚") {
             std::cout << "[成就系统] " << event.victor_player_name << " 完成了“屠龙伟业”成就！(奥妮克希亚)\n";
         }
     }
 };
 
-// --- 辅助函数和游戏逻辑 ---
+// --- 游戏模拟类 ---
+class GameSimulation {
+private:
+    entt::registry m_registry;
+    entt::dispatcher &m_dispatcher;
+    GameWorldLogger m_world_logger; // 将观察者作为成员，确保其生命周期
+    AchievementSystem m_achievement_tracker;
 
-// 模拟玩家攻击怪物的函数
-void simulate_player_attack(entt::registry &registry, entt::dispatcher &dispatcher,
-                            entt::entity player_entity, entt::entity monster_entity, int damage) {
-    if(!registry.valid(player_entity) || !registry.valid(monster_entity)) {
-        std::cerr << "错误：无效的玩家或怪物实体。\n";
-        return;
-    }
+    // 玩家和怪物实体的句柄，方便在不同方法中使用
+    entt::entity m_player1;
+    entt::entity m_player2;
+    entt::entity m_monster_goblin;
+    entt::entity m_monster_dragon;
 
-    auto *player_comp = registry.try_get<PlayerComponent>(player_entity);
-    auto *monster_comp = registry.try_get<MonsterComponent>(monster_entity);
+    void simulate_player_attack_internal(entt::entity player_entity, entt::entity monster_entity, int damage) {
+        if(!m_registry.valid(player_entity) || !m_registry.valid(monster_entity)) {
+            std::cerr << "错误：无效的玩家或怪物实体。\n";
+            return;
+        }
 
-    if(!player_comp || !monster_comp) {
-        std::cerr << "错误：玩家或怪物组件缺失。\n";
-        return;
-    }
+        auto *player_comp = m_registry.try_get<PlayerComponent>(player_entity);
+        auto *monster_comp = m_registry.try_get<MonsterComponent>(monster_entity);
 
-    if(monster_comp->health <= 0) {
-        // 允许鞭尸日志，但不实际扣血或触发二次死亡
-        // std::cout << monster_comp->type << " 已经被击败了，无法再次对其造成伤害。\n";
-        // 触发攻击事件，但生命值不变或为0
-        dispatcher.trigger(PlayerAttacksMonsterEvent{
+        if(!player_comp || !monster_comp) {
+            std::cerr << "错误：玩家或怪物组件缺失。\n";
+            return;
+        }
+
+        if(monster_comp->health <= 0) {
+            m_dispatcher.trigger(PlayerAttacksMonsterEvent{
+                player_entity, player_comp->name,
+                monster_entity, monster_comp->type,
+                0, 0});
+            return;
+        }
+
+        monster_comp->health -= damage;
+        int remaining_health = monster_comp->health < 0 ? 0 : monster_comp->health;
+
+        m_dispatcher.trigger(PlayerAttacksMonsterEvent{
             player_entity, player_comp->name,
             monster_entity, monster_comp->type,
-            0, // 伤害为0，因为已被击败
-            0  // 剩余生命值为0
-        });
-        return;
-    }
+            damage, remaining_health});
 
-    monster_comp->health -= damage;
-    int remaining_health = monster_comp->health;
-
-    if(remaining_health < 0) {
-        remaining_health = 0;
-    }
-
-    dispatcher.trigger(PlayerAttacksMonsterEvent{
-        player_entity, player_comp->name,
-        monster_entity, monster_comp->type,
-        damage, remaining_health});
-
-    if(remaining_health <= 0) {
-        dispatcher.trigger(MonsterDefeatedEvent{
-            monster_entity, monster_comp->type,
-            player_entity, player_comp->name});
-        // 实际游戏中，可能需要从 registry 中移除怪物实体或标记为死亡
-        // registry.destroy(monster_entity); // 例如
-    }
-}
-
-int main() {
-    entt::registry registry;
-    auto &dispatcher = registry.ctx().emplace<entt::dispatcher>();
-
-    // 创建观察者实例
-    GameWorldLogger world_logger;
-    AchievementSystem achievement_tracker;
-
-    // 连接观察者的处理函数到 dispatcher
-    dispatcher.sink<PlayerJoinsGameEvent>().connect<&GameWorldLogger::onPlayerJoins>(world_logger);
-    dispatcher.sink<MonsterAppearsEvent>().connect<&GameWorldLogger::onMonsterAppears>(world_logger);
-    dispatcher.sink<PlayerAttacksMonsterEvent>().connect<&GameWorldLogger::onPlayerAttack>(world_logger);
-    dispatcher.sink<MonsterDefeatedEvent>().connect<&GameWorldLogger::onMonsterDefeated>(world_logger);
-
-    dispatcher.sink<MonsterDefeatedEvent>().connect<&AchievementSystem::onMonsterDefeated>(achievement_tracker);
-
-    std::cout << "--- MMO 世界模拟开始 ---\n\n";
-
-    // 创建玩家实体
-    auto player1 = registry.create();
-    registry.emplace<PlayerComponent>(player1, "阿尔萨斯", 200);
-    dispatcher.trigger(PlayerJoinsGameEvent{player1, registry.get<PlayerComponent>(player1).name});
-
-    auto player2 = registry.create();
-    registry.emplace<PlayerComponent>(player2, "吉安娜", 150);
-    dispatcher.trigger(PlayerJoinsGameEvent{player2, registry.get<PlayerComponent>(player2).name});
-
-    std::cout << "\n";
-
-    // 创建怪物实体
-    auto monster_goblin = registry.create();
-    registry.emplace<MonsterComponent>(monster_goblin, "哥布林工兵", 50);
-    dispatcher.trigger(MonsterAppearsEvent{monster_goblin,
-                                           registry.get<MonsterComponent>(monster_goblin).type,
-                                           registry.get<MonsterComponent>(monster_goblin).health});
-
-    auto monster_dragon = registry.create();
-    registry.emplace<MonsterComponent>(monster_dragon, "奥妮克希亚", 1000);
-    dispatcher.trigger(MonsterAppearsEvent{monster_dragon,
-                                           registry.get<MonsterComponent>(monster_dragon).type,
-                                           registry.get<MonsterComponent>(monster_dragon).health});
-    std::cout << "\n";
-
-    // 模拟战斗
-    std::cout << "--- 战斗阶段 ---\n";
-    simulate_player_attack(registry, dispatcher, player1, monster_goblin, 30);
-    simulate_player_attack(registry, dispatcher, player2, monster_goblin, 25); // 哥布林应被击败
-    simulate_player_attack(registry, dispatcher, player1, monster_goblin, 10); // 尝试攻击已死亡的哥布林
-
-    std::cout << "\n";
-    simulate_player_attack(registry, dispatcher, player1, monster_dragon, 70);
-    simulate_player_attack(registry, dispatcher, player2, monster_dragon, 50);
-    simulate_player_attack(registry, dispatcher, player1, monster_dragon, 70);
-
-    // ... 更多攻击直到巨龙被击败
-    // 确保巨龙有足够生命值被多次攻击
-    if(registry.valid(monster_dragon) && registry.all_of<MonsterComponent>(monster_dragon)) {
-        int dragon_health_before_final_blow = registry.get<MonsterComponent>(monster_dragon).health;
-        if(dragon_health_before_final_blow > 0) {                                                                        // 仅当巨龙还活着时才进行最后一击
-            simulate_player_attack(registry, dispatcher, player1, monster_dragon, dragon_health_before_final_blow + 10); // 确保击败
+        if(remaining_health <= 0) {
+            m_dispatcher.trigger(MonsterDefeatedEvent{
+                monster_entity, monster_comp->type,
+                player_entity, player_comp->name});
         }
     }
 
-    std::cout << "\n--- MMO 世界模拟结束 ---\n";
+public:
+    GameSimulation()
+        : m_dispatcher(m_registry.ctx().emplace<entt::dispatcher>()) {
+        // 连接观察者的处理函数到 dispatcher
+        m_dispatcher.sink<PlayerJoinsGameEvent>().connect<&GameWorldLogger::onPlayerJoins>(m_world_logger);
+        m_dispatcher.sink<MonsterAppearsEvent>().connect<&GameWorldLogger::onMonsterAppears>(m_world_logger);
+        m_dispatcher.sink<PlayerAttacksMonsterEvent>().connect<&GameWorldLogger::onPlayerAttack>(m_world_logger);
+        m_dispatcher.sink<MonsterDefeatedEvent>().connect<&GameWorldLogger::onMonsterDefeated>(m_world_logger);
+        m_dispatcher.sink<MonsterDefeatedEvent>().connect<&AchievementSystem::onMonsterDefeated>(m_achievement_tracker);
+    }
 
+    void initialize_world() {
+        std::cout << "--- MMO 世界模拟开始 ---\n\n";
+
+        // 创建玩家实体
+        m_player1 = m_registry.create();
+        m_registry.emplace<PlayerComponent>(m_player1, "阿尔萨斯", 200);
+        m_dispatcher.trigger(PlayerJoinsGameEvent{m_player1, m_registry.get<PlayerComponent>(m_player1).name});
+
+        m_player2 = m_registry.create();
+        m_registry.emplace<PlayerComponent>(m_player2, "吉安娜", 150);
+        m_dispatcher.trigger(PlayerJoinsGameEvent{m_player2, m_registry.get<PlayerComponent>(m_player2).name});
+
+        std::cout << "\n";
+
+        // 创建怪物实体
+        m_monster_goblin = m_registry.create();
+        m_registry.emplace<MonsterComponent>(m_monster_goblin, "哥布林工兵", 50);
+        m_dispatcher.trigger(MonsterAppearsEvent{m_monster_goblin,
+                                                 m_registry.get<MonsterComponent>(m_monster_goblin).type,
+                                                 m_registry.get<MonsterComponent>(m_monster_goblin).health});
+
+        m_monster_dragon = m_registry.create();
+        m_registry.emplace<MonsterComponent>(m_monster_dragon, "奥妮克希亚", 1000);
+        m_dispatcher.trigger(MonsterAppearsEvent{m_monster_dragon,
+                                                 m_registry.get<MonsterComponent>(m_monster_dragon).type,
+                                                 m_registry.get<MonsterComponent>(m_monster_dragon).health});
+        std::cout << "\n";
+    }
+
+    void run_combat_scenarios() {
+        std::cout << "--- 战斗阶段 ---\n";
+        simulate_player_attack_internal(m_player1, m_monster_goblin, 30);
+        simulate_player_attack_internal(m_player2, m_monster_goblin, 25); // 哥布林应被击败
+        simulate_player_attack_internal(m_player1, m_monster_goblin, 10); // 尝试攻击已死亡的哥布林
+
+        std::cout << "\n";
+        simulate_player_attack_internal(m_player1, m_monster_dragon, 70);
+        simulate_player_attack_internal(m_player2, m_monster_dragon, 50);
+        simulate_player_attack_internal(m_player1, m_monster_dragon, 70);
+
+        if(m_registry.valid(m_monster_dragon) && m_registry.all_of<MonsterComponent>(m_monster_dragon)) {
+            int dragon_health_before_final_blow = m_registry.get<MonsterComponent>(m_monster_dragon).health;
+            if(dragon_health_before_final_blow > 0) {
+                simulate_player_attack_internal(m_player1, m_monster_dragon, dragon_health_before_final_blow + 10);
+            }
+        }
+        std::cout << "\n--- MMO 世界模拟结束 ---\n";
+    }
+};
+
+int main() {
+    // 调用 dmfix_win_utf8.h 中的函数 (如果需要)
+    // 例如: dmfix_win_utf8::init();
+
+    GameSimulation game;
+    game.initialize_world();
+    game.run_combat_scenarios();
+
+    // 调用 dmfix_win_utf8.h 中的清理函数 (如果需要)
+    // 例如: dmfix_win_utf8::cleanup();
     return 0;
 }
