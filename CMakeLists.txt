@@ -19,19 +19,20 @@ project(
     LANGUAGES C CXX
 )
 
-LIST(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
-INCLUDE(cmake/ModuleImport.cmake)
-INCLUDE(cmake/ModuleCompileOptions.cmake)
+list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
+include(cmake/ModuleImport.cmake)
+include(cmake/ModuleCompileOptions.cmake)
+ModuleSetCompileOptions()
 
-IF (WIN32)
-    LINK_DIRECTORIES(${CMAKE_SOURCE_DIR}/bin)
-    SET(EXECUTABLE_OUTPUT_PATH ${CMAKE_SOURCE_DIR}/bin)
-    SET(LIBRARY_OUTPUT_PATH ${CMAKE_SOURCE_DIR}/bin)
-ELSE(WIN32)
-    LINK_DIRECTORIES(${CMAKE_SOURCE_DIR}/bin/${CMAKE_BUILD_TYPE})
-    SET(EXECUTABLE_OUTPUT_PATH ${CMAKE_SOURCE_DIR}/bin/${CMAKE_BUILD_TYPE})
-    SET(LIBRARY_OUTPUT_PATH ${CMAKE_SOURCE_DIR}/bin/${CMAKE_BUILD_TYPE})
-ENDIF(WIN32)
+if (WIN32)
+    link_directories(${CMAKE_SOURCE_DIR}/bin)
+    set(EXECUTABLE_OUTPUT_PATH ${CMAKE_SOURCE_DIR}/bin)
+    set(LIBRARY_OUTPUT_PATH ${CMAKE_SOURCE_DIR}/bin)
+else()
+    link_directories(${CMAKE_SOURCE_DIR}/bin/${CMAKE_BUILD_TYPE})
+    set(EXECUTABLE_OUTPUT_PATH ${CMAKE_SOURCE_DIR}/bin/${CMAKE_BUILD_TYPE})
+    set(LIBRARY_OUTPUT_PATH ${CMAKE_SOURCE_DIR}/bin/${CMAKE_BUILD_TYPE})
+endif()
 
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/googletest)
 
