@@ -5,7 +5,7 @@
 // 1. 包含 Cereal 和 EnTT 的头文件
 #include <cereal/archives/json.hpp>
 #include <entt/entt.hpp>
-
+#include "dmfix_win_utf8.h"
 // --- (2) 定义我们的组件 ---
 struct Position {
     float x;
